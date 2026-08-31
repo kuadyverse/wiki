@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <title>Kuadyverse Wiki</title>
+    
+    <!-- Supabase CDN Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* Wikipedia Baseline Styling */
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f6f6f6;
+            color: #202122;
+        }
+        #sidebar {
+            width: 160px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            padding: 1em;
+            background: #f6f6f6;
+            border-right: 1px solid #a2a9b1;
+            font-size: 0.85em;
+            overflow-y: auto;
+        }
+        #sidebar h1 {
+            font-size: 1.2em;
+            margin-top: 0;
+            border-bottom: 1px solid #a2a9b1;
+            padding-bottom: 0.3em;
+        }
+        #sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        #sidebar li {
+            margin-bottom: 0.5em;
+        }
+        #sidebar a {
+            color: #0645ad;
+            text-decoration: none;
+        }
+        #sidebar a:hover {
+            text-decoration: underline;
+        }
+        #content-wrapper {
+            margin-left: 190px;
+            padding: 1.5em 2.5em;
+            background: #ffffff;
+            min-height: 100vh;
+            border-left: 1px solid #a2a9b1;
+        }
+        .wiki-header {
+            border-bottom: 1px solid #a2a9b1;
+            padding-bottom: 0.2em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1.page-title {
+            font-family: 'Linux Libertine', 'Georgia', Times, serif;
+            font-weight: normal;
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        /* Sidebar Section Titles & Widgets */
+        .sidebar-section {
+            margin-top: 15px;
+            border-top: 1px solid #a2a9b1;
+            padding-top: 10px;
+        }
+        .sidebar-section h3 {
+            font-size: 0.9em;
+            margin: 0 0 8px 0;
+            color: #54595d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Search Section Styling */
+        .search-container {
+            margin-top: 15px;
+            position: relative;
+        }
+        .search-box {
+            display: flex;
+            gap: 4px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 4px;
+            font-size: 0.85em;
+            border: 1px solid #a2a9b1;
+            box-sizing: border-box;
+        }
+        .search-box button {
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            cursor: pointer;
+            padding: 4px 6px;
+            font-size: 0.8em;
+        }
+        .search-box button:hover {
+            background: #e0e0e0;
+        }
+        #search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #a2a9b1;
+            border-top: none;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-item {
+            padding: 6px;
+            cursor: pointer;
+            color: #0645ad;
+            font-size: 0.85em;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .search-item:hover {
+            background-color: #eaecf0;
+            text-decoration: underline;
+        }
+
+        /* Admin Controls */
+        #admin-panel {
+            margin-bottom: 1em;
+            background: #f8f9fa;
+            border: 1px solid #c8ccd1;
+            padding: 10px;
+            display: none;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .btn {
+            background: #36c;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .btn:hover {
+            background: #447ff5;
+        }
+        .btn-secondary {
+            background: #2a4b8d;
+        }
+        .btn-danger {
+            background: #d33;
+        }
+        .btn-danger:hover {
+            background: #b22;
+        }
+        .btn-toggle {
+            background: #72777d;
+            font-size: 0.8em;
+            width: 100%;
+        }
+        .btn-tool {
+            background: #eaecf0;
+            color: #202122;
+            border: 1px solid #a2a9b1;
+            padding: 4px 8px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+        .btn-tool:hover {
+            background: #ffffff;
+        }
+        
+        /* Page Content Display */
+        #article-body {
+            line-height: 1.6;
+            margin-top: 1.5em;
+        }
+        
+        /* Wikipedia Style Article Headers */
+        #article-body h2 {
+            font-family: 'Linux Libertine', 'Georgia', Times, serif;
+            font-weight: normal;
+            font-size: 1.5em;
+            border-bottom: 1px solid #a2a9b1;
+            padding-bottom: 0.25em;
+            margin-top: 1.2em;
+            margin-bottom: 0.5em;
+        }
+        #article-body h3 {
+            font-family: 'Linux Libertine', 'Georgia', Times, serif;
+            font-weight: normal;
+            font-size: 1.2em;
+            margin-top: 1em;
+            margin-bottom: 0.3em;
+        }
+
+        #article-body img, #article-body video, #article-body iframe {
+            max-width: 100%;
+            display: block;
+            margin: 1em 0;
+            border: 1px solid #c8ccd1;
+        }
+
+        /* Wikipedia Style Infobox */
+        .portable-infobox {
+            float: right;
+            clear: right;
+            margin: 0 0 1em 1em;
+            width: 270px;
+            background-color: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            padding: 5px;
+            font-size: 0.88em;
+            line-height: 1.5em;
+        }
+        .portable-infobox table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .portable-infobox th {
+            background-color: #ced3d8;
+            text-align: center;
+            font-weight: bold;
+            padding: 5px;
+        }
+        .portable-infobox td {
+            padding: 4px 6px;
+            vertical-align: top;
+        }
+        .portable-infobox td.infobox-label {
+            font-weight: bold;
+            width: 40%;
+            border-right: 1px solid #a2a9b1;
+        }
+        .portable-infobox tr:nth-child(even) {
+            background-color: #f1f2f4;
+        }
+        .portable-infobox img {
+            width: 100% !important;
+            height: auto !important;
+            margin: 5px 0 !important;
+        }
+
+        .wiki-footer {
+            margin-top: 3em;
+            padding-top: 1em;
+            border-top: 1px solid #a2a9b1;
+            font-size: 0.85em;
+            color: #54595d;
+        }
+
+        /* Editor Form with Side Panel */
+        #editor-form {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 1em;
+        }
+        #toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            background: #f8f9fa;
+            padding: 6px;
+            border: 1px solid #a2a9b1;
+        }
+        .editor-container {
+            display: flex;
+            gap: 15px;
+        }
+        .editor-main {
+            flex-grow: 1;
+        }
+        .editor-side {
+            width: 250px;
+            background: #f8f9fa;
+            border: 1px solid #a2a9b1;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #editor-form input, #editor-form textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        #editor-form textarea {
+            height: 320px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h1>Kuadyverse Wiki</h1>
+        <ul>
+            <li><a href="#" onclick="loadPage('Main Page')">Main Page</a></li>
+        </ul>
+        <hr>
+        <button class="btn btn-toggle" id="auth-btn" onclick="toggleAdmin()">Owner Access</button>
+
+        <!-- Search Bar Component -->
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search page..." oninput="handleSearchInput()" onkeydown="handleSearchKeyDown(event)">
+                <button onclick="executeSearch()">Go</button>
+            </div>
+            <div id="search-results"></div>
+        </div>
+
+        <!-- Recent Pages Sidebar Widget -->
+        <div class="sidebar-section">
+            <h3>Recent Pages</h3>
+            <ul id="recent-pages-list">
+                <!-- Dynamically populated -->
+            </ul>
+        </div>
+    </div>
+
+    <div id="content-wrapper">
+        <div class="wiki-header">
+            <h1 class="page-title" id="display-title">Main Page</h1>
+        </div>
+
+        <!-- Exclusive Controls (Owner Mode) -->
+        <div id="admin-panel">
+            <strong>Owner Mode Active</strong>
+            <div class="btn-group">
+                <button class="btn" onclick="showAddEditor()">+ Add New Page</button>
+                <button class="btn btn-secondary" onclick="showEditEditor()">✎ Edit This Page</button>
+                <button class="btn btn-danger" onclick="deleteCurrentPage()">🗑 Delete This Page</button>
+            </div>
+        </div>
+
+        <!-- Editor Form -->
+        <div id="editor-form">
+            <input type="text" id="input-title" placeholder="Page Title (e.g., Timeline)">
+            
+            <!-- Quick Markup Toolbar -->
+            <div id="toolbar">
+                <button class="btn-tool" onclick="wrapFormat('b')"><b>B</b> (Bold)</button>
+                <button class="btn-tool" onclick="wrapFormat('i')"><i>I</i> (Italic)</button>
+                <button class="btn-tool" onclick="wrapFormat('u')"><u>U</u> (Underline)</button>
+                <button class="btn-tool" onclick="wrapFormat('small')"><small>Small Text</small></button>
+                <button class="btn-tool" onclick="insertSnippet('h2')">Header (H2)</button>
+                <button class="btn-tool" onclick="insertSnippet('h3')">Subheader (H3)</button>
+                <button class="btn-tool" onclick="insertSnippet('infobox')">Infobox</button>
+                <button class="btn-tool" onclick="insertSnippet('int-link')">Internal Link</button>
+                <button class="btn-tool" onclick="insertSnippet('ext-link')">External Link</button>
+                <button class="btn-tool" onclick="insertSnippet('footnote')">Footnote</button>
+                <button class="btn-tool" onclick="insertSnippet('audio')">Audio Player</button>
+                <button class="btn-tool" onclick="insertSnippet('video')">Video Player</button>
+                <button class="btn-tool" onclick="insertSnippet('yt-embed')">YouTube Embed</button>
+                <button class="btn-tool" onclick="insertSnippet('footer')">Footer</button>
+            </div>
+
+            <div class="editor-container">
+                <!-- Text Area -->
+                <div class="editor-main">
+                    <textarea id="input-content" placeholder="Write article HTML or content... You can use [[Page Name]] or [[Page Name|Label]] for wiki links."></textarea>
+                </div>
+
+                <!-- Side Panel (Image Adder) -->
+                <div class="editor-side">
+                    <h4>Add Media Link</h4>
+                    <p style="font-size:0.8em; margin:0; color:#54595d;">Paste PostImage or direct media URL below:</p>
+                    <input type="text" id="image-url-input" placeholder="https://i.postimg.cc/xxx/pic.png">
+                    <button class="btn" onclick="insertImageLink()">Insert Image</button>
+                </div>
+            </div>
+
+            <div>
+                <button class="btn" onclick="savePage()">Save Page Globally</button>
+                <button class="btn btn-danger" onclick="hideEditor()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Rendered Page Output -->
+        <div id="article-body"></div>
+    </div>
+
+    <script>
+        // Supabase Initialization
+        const SUPABASE_URL = "https://ysflyrcfwoofmpnrhcpk.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzZmx5cmNmd29vZm1wbnJoY3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODUyNjcsImV4cCI6MjEwMzc2MTI2N30._yryvGLjPj1vroz7S_Quy3pnjEckggUBr97wWFIvwH8";
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const PASSCODE = "thisisfornorthonly";
+        let isAdmin = false;
+
+        const defaultMainPage = `<p>Welcome to <strong>Kuadyverse Wiki</strong>.</p>
+<h2>Recent Activity</h2>
+<p>Use the search bar on the left or explore the latest page updates below:</p>
+<div id="main-page-recent-index"></div>`;
+
+        // Wikitext Link Parsing [[Target Page|Display Text]] or [[Target Page]]
+        function parseWikiLinks(content) {
+            if (!content) return '';
+            return content.replace(/\[\[([^\]\|]+)(?:\|([^\]]+))?\]\]/g, (match, target, label) => {
+                const pageTarget = target.trim();
+                const displayLabel = label ? label.trim() : pageTarget;
+                return `<a href="#" onclick="loadPage('${pageTarget.replace(/'/g, "\\'")}')">${displayLabel}</a>`;
+            });
+        }
+
+        // Load Page from Supabase
+        async function loadPage(title) {
+            document.getElementById('display-title').innerText = title;
+            const articleBody = document.getElementById('article-body');
+            articleBody.innerHTML = "<p><em>Loading page...</em></p>";
+
+            const { data, error } = await supabase
+                .from('pages')
+                .select('*')
+                .eq('title', title)
+                .maybeSingle();
+
+            if (data && data.content) {
+                articleBody.innerHTML = parseWikiLinks(data.content);
+            } else if (title === 'Main Page') {
+                articleBody.innerHTML = parseWikiLinks(defaultMainPage);
+            } else {
+                articleBody.innerHTML = `
+                    <p><em>The page "<strong>${title}</strong>" does not exist yet.</em></p>
+                    ${isAdmin ? `<p><button class="btn" onclick="createNewPageFromSearch('${title}')">Create "${title}"</button></p>` : '<p>Switch to Owner Access to create this page.</p>'}
+                `;
+            }
+
+            hideEditor();
+            closeSearchResults();
+            updateRecentWidgets();
+        }
+
+        // Save Page to Supabase
+        async function savePage() {
+            const title = document.getElementById('input-title').value.trim();
+            const content = document.getElementById('input-content').value;
+
+            if (!title) return alert('Title required');
+
+            const { data, error } = await supabase
+                .from('pages')
+                .upsert([{ title: title, content: content }], { onConflict: 'title' });
+
+            if (error) {
+                alert("Error saving page to database: " + error.message);
+            } else {
+                saveRecentOrder(title);
+                loadPage(title);
+            }
+        }
+
+        // Delete Page from Supabase
+        async function deleteCurrentPage() {
+            const currentTitle = document.getElementById('display-title').innerText;
+
+            if (currentTitle === "Main Page") {
+                alert("The 'Main Page' cannot be deleted.");
+                return;
+            }
+
+            const confirmDelete = confirm(`Are you sure you want to delete "${currentTitle}"?\nThis action cannot be undone.`);
+            
+            if (confirmDelete) {
+                const { error } = await supabase
+                    .from('pages')
+                    .delete()
+                    .eq('title', currentTitle);
+
+                if (error) {
+                    alert("Error deleting page: " + error.message);
+                } else {
+                    removeFromRecentOrder(currentTitle);
+                    alert(`"${currentTitle}" has been deleted.`);
+                    loadPage("Main Page");
+                }
+            }
+        }
+
+        // Search Mechanics (Fetching Titles from Supabase)
+        async function handleSearchInput() {
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            const resultsBox = document.getElementById('search-results');
+            resultsBox.innerHTML = '';
+
+            if (!query) {
+                resultsBox.style.display = 'none';
+                return;
+            }
+
+            const { data } = await supabase
+                .from('pages')
+                .select('title')
+                .ilike('title', `%${query}%`);
+
+            if (data && data.length > 0) {
+                data.forEach(row => {
+                    const item = document.createElement('div');
+                    item.className = 'search-item';
+                    item.innerText = row.title;
+                    item.onclick = () => {
+                        document.getElementById('search-input').value = row.title;
+                        loadPage(row.title);
+                    };
+                    resultsBox.appendChild(item);
+                });
+                resultsBox.style.display = 'block';
+            } else {
+                resultsBox.style.display = 'none';
+            }
+        }
+
+        function handleSearchKeyDown(event) {
+            if (event.key === 'Enter') {
+                executeSearch();
+            }
+        }
+
+        function executeSearch() {
+            const query = document.getElementById('search-input').value.trim();
+            if (!query) return;
+            loadPage(query);
+        }
+
+        function closeSearchResults() {
+            document.getElementById('search-results').style.display = 'none';
+        }
+
+        function createNewPageFromSearch(title) {
+            document.getElementById('input-title').value = title;
+            document.getElementById('input-content').value = '';
+            showEditorForm();
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                closeSearchResults();
+            }
+        });
+
+        // Recent metadata tracking
+        function getRecentOrder() {
+            const data = localStorage.getItem('kuadyverse_wiki_recent');
+            return data ? JSON.parse(data) : ["Main Page"];
+        }
+
+        function saveRecentOrder(title) {
+            let recent = getRecentOrder();
+            recent = recent.filter(t => t !== title);
+            recent.unshift(title);
+            localStorage.setItem('kuadyverse_wiki_recent', JSON.stringify(recent));
+        }
+
+        function removeFromRecentOrder(title) {
+            let recent = getRecentOrder();
+            recent = recent.filter(t => t !== title);
+            localStorage.setItem('kuadyverse_wiki_recent', JSON.stringify(recent));
+        }
+
+        function updateRecentWidgets() {
+            const recent = getRecentOrder();
+            const sidebarList = document.getElementById('recent-pages-list');
+            sidebarList.innerHTML = '';
+
+            const topRecent = recent.slice(0, 5);
+            topRecent.forEach(title => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="#" onclick="loadPage('${title}')">${title}</a>`;
+                sidebarList.appendChild(li);
+            });
+
+            const mainPageRecentIndex = document.getElementById('main-page-recent-index');
+            if (mainPageRecentIndex) {
+                let html = '<ul>';
+                recent.forEach(title => {
+                    html += `<li><a href="#" onclick="loadPage('${title}')">${title}</a></li>`;
+                });
+                html += '</ul>';
+                mainPageRecentIndex.innerHTML = html;
+            }
+        }
+
+        // Owner Access Toggle
+        function toggleAdmin() {
+            if (!isAdmin) {
+                const input = prompt("Enter Owner Access Password:");
+                if (input === PASSCODE) {
+                    isAdmin = true;
+                    document.getElementById('admin-panel').style.display = 'block';
+                    document.getElementById('auth-btn').innerText = "Exit Owner Mode";
+                } else if (input !== null) {
+                    alert("Incorrect password.");
+                }
+            } else {
+                isAdmin = false;
+                document.getElementById('admin-panel').style.display = 'none';
+                document.getElementById('auth-btn').innerText = "Owner Access";
+                hideEditor();
+            }
+        }
+
+        function showAddEditor() {
+            document.getElementById('input-title').value = '';
+            document.getElementById('input-content').value = '';
+            showEditorForm();
+        }
+
+        async function showEditEditor() {
+            const currentTitle = document.getElementById('display-title').innerText;
+            document.getElementById('input-title').value = currentTitle;
+
+            const { data } = await supabase
+                .from('pages')
+                .select('content')
+                .eq('title', currentTitle)
+                .maybeSingle();
+
+            document.getElementById('input-content').value = data ? data.content : '';
+            showEditorForm();
+        }
+
+        function showEditorForm() {
+            document.getElementById('editor-form').style.display = 'flex';
+        }
+
+        function hideEditor() {
+            document.getElementById('editor-form').style.display = 'none';
+        }
+
+        function wrapFormat(tag) {
+            const textArea = document.getElementById('input-content');
+            const start = textArea.selectionStart;
+            const end = textArea.selectionEnd;
+            const selectedText = textArea.value.substring(start, end);
+
+            const replacement = selectedText 
+                ? `<${tag}>${selectedText}</${tag}>` 
+                : `<${tag}>text</${tag}>`;
+
+            textArea.value = textArea.value.substring(0, start) + replacement + textArea.value.substring(end);
+            textArea.focus();
+            
+            const newCursorPos = selectedText ? start + replacement.length : start + tag.length + 2;
+            textArea.setSelectionRange(newCursorPos, newCursorPos);
+        }
+
+        function insertSnippet(type) {
+            const textArea = document.getElementById('input-content');
+            let snippet = '';
+
+            switch(type) {
+                case 'h2': snippet = '\n<h2>Section Header</h2>\n'; break;
+                case 'h3': snippet = '\n<h3>Sub-section Header</h3>\n'; break;
+                case 'infobox': snippet = `\n<aside class="portable-infobox">\n  <table>\n    <tr><th colspan="2">Subject Title</th></tr>\n    <tr><td colspan="2"><img src="https://i.postimg.cc/xxx/pic.png" alt="Infobox Image"></td></tr>\n    <tr><td class="infobox-label">Type</td><td>Classification</td></tr>\n    <tr><td class="infobox-label">Attribute</td><td>Value</td></tr>\n  </table>\n</aside>\n`; break;
+                case 'int-link': snippet = `[[Target Page Name|Link Text]]`; break;
+                case 'ext-link': snippet = `<a href="https://example.com" target="_blank">External Link Text</a>`; break;
+                case 'footnote': snippet = `<sup id="fn1-ref"><a href="#fn1">[1]</a></sup>`; break;
+                case 'audio': snippet = `\n<audio controls src="audio-file.mp3"></audio>\n`; break;
+                case 'video': snippet = `\n<video controls src="video-file.mp4" width="400"></video>\n`; break;
+                case 'yt-embed': snippet = `\n<iframe width="100%" height="400" src="https://www.youtube-nocookie.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n`; break;
+                case 'footer': snippet = `\n<div class="wiki-footer">\n  <hr>\n  <p id="fn1">1. <a href="#fn1-ref">^</a> Footnote reference text goes here.</p>\n</div>\n`; break;
+            }
+
+            textArea.value += snippet;
+        }
+
+        function insertImageLink() {
+            const urlInput = document.getElementById('image-url-input');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                alert('Please paste an image URL first.');
+                return;
+            }
+
+            const imgTag = `\n<img src="${url}" alt="Wiki Image" style="max-width:100%; height:auto;">\n`;
+            document.getElementById('input-content').value += imgTag;
+            urlInput.value = '';
+        }
+
+        // Initialize Wiki
+        loadPage('Main Page');
+    </script>
+</body>
+</html>
