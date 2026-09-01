@@ -364,6 +364,8 @@
                 <button class="btn-tool" onclick="wrapFormat('small')"><small>Small Text</small></button>
                 <button class="btn-tool" onclick="insertSnippet('h2')">Header (H2)</button>
                 <button class="btn-tool" onclick="insertSnippet('h3')">Subheader (H3)</button>
+                <button class="btn-tool" onclick="insertSnippet('ol')">OL</button>
+                <button class="btn-tool" onclick="insertSnippet('ul')">UL</button>
                 <button class="btn-tool" onclick="insertSnippet('infobox')">Infobox</button>
                 <button class="btn-tool" onclick="insertSnippet('int-link')">Internal Link</button>
                 <button class="btn-tool" onclick="insertSnippet('ext-link')">External Link</button>
@@ -677,6 +679,8 @@
             switch(type) {
                 case 'h2': snippet = '\n<h2>Section Header</h2>\n'; break;
                 case 'h3': snippet = '\n<h3>Sub-section Header</h3>\n'; break;
+                case 'ol': snippet = `\n<ol>\n  <li>First item</li>\n  <li>Second item</li>\n  <li>Third item</li>\n</ol>\n`; break;   
+                case 'ul': snippet = `\n<ul>\n  <li>First item</li>\n  <li>Second item</li>\n  <li>Third item</li>\n</ul>\n`; break;
                 case 'infobox': snippet = `\n<aside class="portable-infobox">\n  <table>\n    <tr><th colspan="2">Subject Title</th></tr>\n    <tr><td colspan="2"><img src="https://i.postimg.cc/xxx/pic.png" alt="Infobox Image"></td></tr>\n    <tr><td class="infobox-label">Type</td><td>Classification</td></tr>\n    <tr><td class="infobox-label">Attribute</td><td>Value</td></tr>\n  </table>\n</aside>\n`; break;
                 case 'int-link': snippet = `[[Target Page Name|Link Text]]`; break;
                 case 'ext-link': snippet = `<a href="https://example.com" target="_blank">External Link Text</a>`; break;
