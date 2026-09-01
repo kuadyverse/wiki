@@ -6,7 +6,7 @@
     <meta name="referrer" content="no-referrer-when-downgrade">
     <title>Kuadyverse Wiki</title>
     
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         /* Wikipedia Baseline Styling */
@@ -403,7 +403,7 @@
         const SUPABASE_URL = "https://ysflyrcfwoofmpnrhcpk.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzZmx5cmNmd29vZm1wbnJoY3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODUyNjcsImV4cCI6MjEwMzc2MTI2N30._yryvGLjPj1vroz7S_Quy3pnjEckggUBr97wWFIvwH8";
 
-        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const PASSCODE = "thisisfornorthonly";
         let isAdmin = false;
@@ -429,7 +429,7 @@
             const articleBody = document.getElementById('article-body');
             articleBody.innerHTML = "<p><em>Loading page...</em></p>";
 
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('pages')
                 .select('*')
                 .eq('title', title)
@@ -458,7 +458,7 @@
 
             if (!title) return alert('Title required');
 
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('pages')
                 .upsert([{ title: title, content: content }], { onConflict: 'title' });
 
@@ -482,7 +482,7 @@
             const confirmDelete = confirm(`Are you sure you want to delete "${currentTitle}"?\nThis action cannot be undone.`);
             
             if (confirmDelete) {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('pages')
                     .delete()
                     .eq('title', currentTitle);
@@ -508,7 +508,7 @@
                 return;
             }
 
-            const { data } = await supabase
+            const { data } = await supabaseClient
                 .from('pages')
                 .select('title')
                 .ilike('title', `%${query}%`);
@@ -629,7 +629,7 @@
             const currentTitle = document.getElementById('display-title').innerText;
             document.getElementById('input-title').value = currentTitle;
 
-            const { data } = await supabase
+            const { data } = await supabaseClient
                 .from('pages')
                 .select('content')
                 .eq('title', currentTitle)
