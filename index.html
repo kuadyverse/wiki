@@ -403,7 +403,7 @@
         const SUPABASE_URL = "https://ysflyrcfwoofmpnrhcpk.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzZmx5cmNmd29vZm1wbnJoY3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODUyNjcsImV4cCI6MjEwMzc2MTI2N30._yryvGLjPj1vroz7S_Quy3pnjEckggUBr97wWFIvwH8";
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const PASSCODE = "thisisfornorthonly";
         let isAdmin = false;
