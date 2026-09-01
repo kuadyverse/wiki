@@ -404,7 +404,7 @@
         const SUPABASE_URL = "https://ysflyrcfwoofmpnrhcpk.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzZmx5cmNmd29vZm1wbnJoY3BrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxODUyNjcsImV4cCI6MjEwMzc2MTI2N30._yryvGLjPj1vroz7S_Quy3pnjEckggUBr97wWFIvwH8";
 
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const PASSCODE = "thisisfornorthonly";
         let isAdmin = false;
@@ -414,13 +414,18 @@
 <p>Use the search bar on the left or explore the latest page updates below:</p>
 <div id="main-page-recent-index"></div>`;
 
+        // Helper function to safely escape strings for inline JS calls
+        function escapeJSString(str) {
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
         // Wikitext Link Parsing [[Target Page|Display Text]] or [[Target Page]]
         function parseWikiLinks(content) {
             if (!content) return '';
             return content.replace(/\[\[([^\]\|]+)(?:\|([^\]]+))?\]\]/g, (match, target, label) => {
                 const pageTarget = target.trim();
                 const displayLabel = label ? label.trim() : pageTarget;
-                return `<a href="#" onclick="loadPage('${pageTarget.replace(/'/g, "\\'")}')">${displayLabel}</a>`;
+                return `<a href="#" onclick="loadPage('${escapeJSString(pageTarget)}')">${displayLabel}</a>`;
             });
         }
 
@@ -443,7 +448,7 @@
             } else {
                 articleBody.innerHTML = `
                     <p><em>The page "<strong>${title}</strong>" does not exist yet.</em></p>
-                    ${isAdmin ? `<p><button class="btn" onclick="createNewPageFromSearch('${title}')">Create "${title}"</button></p>` : '<p>Switch to Owner Access to create this page.</p>'}
+                    ${isAdmin ? `<p><button class="btn" onclick="createNewPageFromSearch('${escapeJSString(title)}')">Create "${title}"</button></p>` : '<p>Switch to Owner Access to create this page.</p>'}
                 `;
             }
 
@@ -500,7 +505,7 @@
 
         // Search Mechanics (Fetching Titles from Supabase)
         async function handleSearchInput() {
-            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            const query = document.getElementById('search-input').value.trim();
             const resultsBox = document.getElementById('search-results');
             resultsBox.innerHTML = '';
 
@@ -586,7 +591,7 @@
             const topRecent = recent.slice(0, 5);
             topRecent.forEach(title => {
                 const li = document.createElement('li');
-                li.innerHTML = `<a href="#" onclick="loadPage('${title}')">${title}</a>`;
+                li.innerHTML = `<a href="#" onclick="loadPage('${escapeJSString(title)}')">${title}</a>`;
                 sidebarList.appendChild(li);
             });
 
@@ -594,7 +599,7 @@
             if (mainPageRecentIndex) {
                 let html = '<ul>';
                 recent.forEach(title => {
-                    html += `<li><a href="#" onclick="loadPage('${title}')">${title}</a></li>`;
+                    html += `<li><a href="#" onclick="loadPage('${escapeJSString(title)}')">${title}</a></li>`;
                 });
                 html += '</ul>';
                 mainPageRecentIndex.innerHTML = html;
