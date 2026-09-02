@@ -375,7 +375,7 @@
                 <button class="btn-tool" onclick="insertSnippet('video')">Video Player</button>
                 <button class="btn-tool" onclick="insertSnippet('yt-embed')">YouTube Embed</button>
                 <button class="btn-tool" onclick="insertSnippet('footer')">Footer</button>
-                <button class="btn-tool" ocClick="insertSnippet('note')">Note</button>
+                <button class="btn-tool" onclick="insertSnippet('note')">Note</button>
             </div>
 
             <div class="editor-container">
@@ -701,7 +701,7 @@ async function toggleAdmin() {
                 case 'video': snippet = `\n<video controls src="video-file.mp4" width="400" preload="metadata"></video>\n`; break;
                 case 'yt-embed': snippet = `\n<iframe width="100%" height="400" src="https://www.youtube-nocookie.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n`; break;
                 case 'footer': snippet = `\n<div class="wiki-footer">\n  <hr>\n  <p id="fn1">1. <a href="#fn1-ref">^</a> Footnote reference text goes here.</p>\n</div>\n`; break;
-                case 'note': snippet = `\n<!--Your note goes here. This message won't pop up on the page! -->\n`; break;     
+                case 'note': snippet = `\n<!-- Your note goes here. This message won't pop up on the page! -->\n`; break;     
             }
 
             textArea.value += snippet;
