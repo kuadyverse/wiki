@@ -697,7 +697,7 @@ async function toggleAdmin() {
                 case 'ext-link': snippet = `<a href="https://example.com" target="_blank">External Link Text</a>`; break;
                 case 'footnote': snippet = `<sup id="fn1-ref"><a href="#fn1">[1]</a></sup>`; break;
                 case 'audio': snippet = `\n<audio controls src="audio-file.mp3"></audio>\n`; break;
-                case 'video': snippet = `\n<video controls src="video-file.mp4" width="400"></video>\n`; break;
+                case 'video': snippet = `\n<video controls src="video-file.mp4" width="400" preload="metadata"></video>\n`; break;
                 case 'yt-embed': snippet = `\n<iframe width="100%" height="400" src="https://www.youtube-nocookie.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n`; break;
                 case 'footer': snippet = `\n<div class="wiki-footer">\n  <hr>\n  <p id="fn1">1. <a href="#fn1-ref">^</a> Footnote reference text goes here.</p>\n</div>\n`; break;
             }
