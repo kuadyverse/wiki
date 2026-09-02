@@ -71,6 +71,20 @@
             margin: 0;
         }
 
+        /* Sidebar Section Titles & Widgets */
+        .sidebar-section {
+            margin-top: 15px;
+            border-top: 1px solid #a2a9b1;
+            padding-top: 10px;
+        }
+        .sidebar-section h3 {
+            font-size: 0.9em;
+            margin: 0 0 8px 0;
+            color: #54595d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         /* Search Section Styling */
         .search-container {
             margin-top: 15px;
@@ -121,20 +135,6 @@
         .search-item:hover {
             background-color: #eaecf0;
             text-decoration: underline;
-        }
-
-        /* Recent Pages Sidebar Widget */
-        .recent-widget {
-            margin-top: 20px;
-            border-top: 1px solid #a2a9b1;
-            padding-top: 10px;
-        }
-        .recent-widget h3 {
-            font-size: 0.9em;
-            margin: 0 0 8px 0;
-            color: #54595d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         /* Admin Controls */
@@ -319,17 +319,17 @@
         <hr>
         <button class="btn btn-toggle" id="auth-btn" onclick="toggleAdmin()">Owner Access</button>
 
-        <!-- Search Bar Component with autocomplete=off -->
+        <!-- Search Bar Component -->
         <div class="search-container">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="Search page..." autocomplete="off" oninput="handleSearchInput()" onkeydown="handleSearchKeyDown(event)">
+                <input type="text" id="search-input" autocomplete="off" placeholder="Search page..." oninput="handleSearchInput()" onkeydown="handleSearchKeyDown(event)">
                 <button onclick="executeSearch()">Go</button>
             </div>
             <div id="search-results"></div>
         </div>
 
         <!-- Recent Pages Sidebar Widget -->
-        <div class="recent-widget">
+        <div class="sidebar-section">
             <h3>Recent Pages</h3>
             <ul id="recent-pages-list">
                 <!-- Dynamically populated -->
@@ -354,7 +354,7 @@
 
         <!-- Editor Form -->
         <div id="editor-form">
-            <input type="text" id="input-title" placeholder="Page Title (e.g., Timeline)">
+            <input type="text" id="input-title" autocomplete="off" placeholder="Page Title">
             
             <!-- Quick Markup Toolbar -->
             <div id="toolbar">
@@ -409,98 +409,8 @@
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // SHA-256 hash of "thisisfornorthonly"
-        const PASSCODE_HASH = "ca2eb67e2a9bca5208f0a049909ddb33f3747ebc7b41eeb095cf0be13f4d62cd";
+        
         let isAdmin = false;
-
-       // Lightweight pure JS SHA-256 fallback for non-secure contexts (e.g. file://)
-function jsSha256(ascii) {
-    function rightRotate(value, amount) {
-        return (value >>> amount) | (value << (32 - amount));
-    }
-    const mathPow = Math.pow;
-    const maxWord = mathPow(2, 32);
-    const lengthProperty = 'length';
-    let i, j;
-    let result = '';
-
-    const words = [];
-    const asciiLength = ascii[lengthProperty] * 8;
-    let hash = jsSha256.h = jsSha256.h || [];
-    let k = jsSha256.k = jsSha256.k || [];
-    let primeCounter = k[lengthProperty];
-
-    const isComposite = {};
-    for (let candidate = 2; primeCounter < 64; candidate++) {
-        if (!isComposite[candidate]) {
-            for (i = 0; i < 300; i += candidate) {
-                isComposite[i] = candidate;
-            }
-            hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
-            k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
-        }
-    }
-
-    ascii += '\x80';
-    while (ascii[lengthProperty] % 64 - 56) ascii += '\x00';
-    for (i = 0; i < ascii[lengthProperty]; i++) {
-        j = ascii.charCodeAt(i);
-        if (j >> 8) return;
-        words[i >> 2] |= j << ((3 - i % 4) * 8);
-    }
-    words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);
-    words[words[lengthProperty]] = (asciiLength);
-
-    for (j = 0; j < words[lengthProperty];) {
-        const w = words.slice(j, j += 16);
-        const oldHash = hash;
-        hash = hash.slice(0, 8);
-
-        for (i = 0; i < 64; i++) {
-            const w15 = w[i - 15], w2 = w[i - 2];
-            const a = hash[0], e = hash[4];
-            const temp1 = hash[7]
-                + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
-                + ((e & hash[5]) ^ ((~e) & hash[6]))
-                + k[i]
-                + (w[i] = (i < 16) ? w[i] : (
-                    w[i - 16]
-                    + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
-                    + w[i - 7]
-                    + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-                ) | 0);
-            const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
-                + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-
-            hash = [(temp1 + temp2) | 0].concat(hash);
-            hash[4] = (hash[4] + temp1) | 0;
-        }
-
-        for (i = 0; i < 8; i++) {
-            hash[i] = (hash[i] + oldHash[i]) | 0;
-        }
-    }
-
-    for (i = 0; i < 8; i++) {
-        for (j = 3; j >= 0; j--) {
-            const b = (hash[i] >> (j * 8)) & 255;
-            result += (b < 16 ? 0 : '') + b.toString(16);
-        }
-    }
-    return result;
-}
-
-// SHA-256 Helper Function with fallback
-async function sha256(message) {
-    if (window.crypto && window.crypto.subtle) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    } else {
-        return jsSha256(message);
-    }
-}
 
         const defaultMainPage = `<p>Welcome to <strong>Kuadyverse Wiki</strong>.</p>
 <h2>Recent Activity</h2>
@@ -699,27 +609,33 @@ async function sha256(message) {
             }
         }
 
-        // Owner Access Toggle with SHA-256 Check
-        async function toggleAdmin() {
-            if (!isAdmin) {
-                const input = prompt("Enter Owner Access Password:");
-                if (input !== null) {
-                    const hashedInput = await sha256(input);
-                    if (hashedInput === PASSCODE_HASH) {
-                        isAdmin = true;
-                        document.getElementById('admin-panel').style.display = 'block';
-                        document.getElementById('auth-btn').innerText = "Exit Owner Mode";
-                    } else {
-                        alert("Incorrect password.");
-                    }
-                }
+        // Owner Access Toggle
+// Owner Access Toggle
+async function toggleAdmin() {
+    if (!isAdmin) {
+        const input = prompt("Enter Owner Access Password:");
+        if (input !== null) {
+            // Send the input to Supabase to verify
+            const { data: isValid, error } = await supabaseClient
+                .rpc('verify_owner_password', { user_input: input });
+
+            if (error) {
+                alert("Verification error: " + error.message);
+            } else if (isValid) {
+                isAdmin = true;
+                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('auth-btn').innerText = "Exit Owner Mode";
             } else {
-                isAdmin = false;
-                document.getElementById('admin-panel').style.display = 'none';
-                document.getElementById('auth-btn').innerText = "Owner Access";
-                hideEditor();
+                alert("Incorrect password.");
             }
         }
+    } else {
+        isAdmin = false;
+        document.getElementById('admin-panel').style.display = 'none';
+        document.getElementById('auth-btn').innerText = "Owner Access";
+        hideEditor();
+    }
+}
 
         function showAddEditor() {
             document.getElementById('input-title').value = '';
