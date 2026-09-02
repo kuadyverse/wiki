@@ -315,6 +315,7 @@
         <h1>Kuadyverse Wiki</h1>
         <ul>
             <li><a href="#" onclick="loadPage('Main Page')">Main Page</a></li>
+            <li><a href="#" onclick="loadRandomPage()">Random Page</a></li>
         </ul>
         <hr>
         <button class="btn btn-toggle" id="auth-btn" onclick="toggleAdmin()">Owner Access</button>
@@ -322,7 +323,7 @@
         <!-- Search Bar Component -->
         <div class="search-container">
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="Search page..." oninput="handleSearchInput()" onkeydown="handleSearchKeyDown(event)">
+                <input type="text" id="search-input" placeholder="Search page..." autocomplete="off" oninput="handleSearchInput()" onkeydown="handleSearchKeyDown(event)">
                 <button onclick="executeSearch()">Go</button>
             </div>
             <div id="search-results"></div>
@@ -333,6 +334,14 @@
             <h3>Recent Pages</h3>
             <ul id="recent-pages-list">
                 <!-- Dynamically populated -->
+            </ul>
+        </div>
+
+        <!-- All Pages / Index Sidebar Widget -->
+        <div class="sidebar-section">
+            <h3>All Pages</h3>
+            <ul id="all-pages-list">
+                <!-- Dynamically populated from Supabase -->
             </ul>
         </div>
     </div>
@@ -409,13 +418,22 @@
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const PASSCODE = "thisisfornorthonly";
+        // SHA-256 Hash of the owner passcode
+        const PASSCODE_HASH = "7e4bd433bdcc1b069d2a02bca814be0c4e7aebfb0cdfe99f936bd5b6d5733f1c";
         let isAdmin = false;
 
         const defaultMainPage = `<p>Welcome to <strong>Kuadyverse Wiki</strong>.</p>
 <h2>Recent Activity</h2>
 <p>Use the search bar on the left or explore the latest page updates below:</p>
 <div id="main-page-recent-index"></div>`;
+
+        // Utility to generate SHA-256 hash string
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         // Helper function to safely escape strings for inline JS calls
         function escapeJSString(str) {
@@ -458,6 +476,44 @@
             hideEditor();
             closeSearchResults();
             updateRecentWidgets();
+            updateAllPagesList();
+        }
+
+        // Fetch and navigate to a random page from Supabase
+        async function loadRandomPage() {
+            const { data, error } = await supabaseClient
+                .from('pages')
+                .select('title');
+
+            if (data && data.length > 0) {
+                const randomIndex = Math.floor(Math.random() * data.length);
+                loadPage(data[randomIndex].title);
+            } else {
+                alert("No pages found in the database.");
+            }
+        }
+
+        // Fetch and render list of all pages in the sidebar
+        async function updateAllPagesList() {
+            const allPagesContainer = document.getElementById('all-pages-list');
+            if (!allPagesContainer) return;
+
+            const { data, error } = await supabaseClient
+                .from('pages')
+                .select('title')
+                .order('title', { ascending: true });
+
+            allPagesContainer.innerHTML = '';
+
+            if (data && data.length > 0) {
+                data.forEach(row => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="#" onclick="loadPage('${escapeJSString(row.title)}')">${row.title}</a>`;
+                    allPagesContainer.appendChild(li);
+                });
+            } else {
+                allPagesContainer.innerHTML = '<li><em>No pages found</em></li>';
+            }
         }
 
         // Save Page to Supabase
@@ -609,16 +665,19 @@
             }
         }
 
-        // Owner Access Toggle
-        function toggleAdmin() {
+        // Owner Access Toggle with SHA-256 Hashing
+        async function toggleAdmin() {
             if (!isAdmin) {
                 const input = prompt("Enter Owner Access Password:");
-                if (input === PASSCODE) {
-                    isAdmin = true;
-                    document.getElementById('admin-panel').style.display = 'block';
-                    document.getElementById('auth-btn').innerText = "Exit Owner Mode";
-                } else if (input !== null) {
-                    alert("Incorrect password.");
+                if (input !== null) {
+                    const hashedInput = await sha256(input);
+                    if (hashedInput === PASSCODE_HASH) {
+                        isAdmin = true;
+                        document.getElementById('admin-panel').style.display = 'block';
+                        document.getElementById('auth-btn').innerText = "Exit Owner Mode";
+                    } else {
+                        alert("Incorrect password.");
+                    }
                 }
             } else {
                 isAdmin = false;
