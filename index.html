@@ -71,20 +71,6 @@
             margin: 0;
         }
 
-        /* Sidebar Section Titles & Widgets */
-        .sidebar-section {
-            margin-top: 15px;
-            border-top: 1px solid #a2a9b1;
-            padding-top: 10px;
-        }
-        .sidebar-section h3 {
-            font-size: 0.9em;
-            margin: 0 0 8px 0;
-            color: #54595d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
         /* Search Section Styling */
         .search-container {
             margin-top: 15px;
@@ -135,6 +121,20 @@
         .search-item:hover {
             background-color: #eaecf0;
             text-decoration: underline;
+        }
+
+        /* Recent Pages Sidebar Widget */
+        .recent-widget {
+            margin-top: 20px;
+            border-top: 1px solid #a2a9b1;
+            padding-top: 10px;
+        }
+        .recent-widget h3 {
+            font-size: 0.9em;
+            margin: 0 0 8px 0;
+            color: #54595d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Admin Controls */
@@ -315,12 +315,11 @@
         <h1>Kuadyverse Wiki</h1>
         <ul>
             <li><a href="#" onclick="loadPage('Main Page')">Main Page</a></li>
-            <li><a href="#" onclick="loadRandomPage()">Random Page</a></li>
         </ul>
         <hr>
         <button class="btn btn-toggle" id="auth-btn" onclick="toggleAdmin()">Owner Access</button>
 
-        <!-- Search Bar Component -->
+        <!-- Search Bar Component with autocomplete=off -->
         <div class="search-container">
             <div class="search-box">
                 <input type="text" id="search-input" placeholder="Search page..." autocomplete="off" oninput="handleSearchInput()" onkeydown="handleSearchKeyDown(event)">
@@ -330,18 +329,10 @@
         </div>
 
         <!-- Recent Pages Sidebar Widget -->
-        <div class="sidebar-section">
+        <div class="recent-widget">
             <h3>Recent Pages</h3>
             <ul id="recent-pages-list">
                 <!-- Dynamically populated -->
-            </ul>
-        </div>
-
-        <!-- All Pages / Index Sidebar Widget -->
-        <div class="sidebar-section">
-            <h3>All Pages</h3>
-            <ul id="all-pages-list">
-                <!-- Dynamically populated from Supabase -->
             </ul>
         </div>
     </div>
@@ -418,22 +409,22 @@
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // SHA-256 Hash of the owner passcode
-        const PASSCODE_HASH = "7e4bd433bdcc1b069d2a02bca814be0c4e7aebfb0cdfe99f936bd5b6d5733f1c";
+        // SHA-256 hash of "thisisfornorthonly"
+        const PASSCODE_HASH = "ca2eb67e2a9bca5208f0a049909ddb33f3747ebc7b41eeb095cf0be13f4d62cd";
         let isAdmin = false;
 
-        const defaultMainPage = `<p>Welcome to <strong>Kuadyverse Wiki</strong>.</p>
-<h2>Recent Activity</h2>
-<p>Use the search bar on the left or explore the latest page updates below:</p>
-<div id="main-page-recent-index"></div>`;
-
-        // Utility to generate SHA-256 hash string
+        // SHA-256 Helper Function
         async function sha256(message) {
             const msgBuffer = new TextEncoder().encode(message);
             const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
+
+        const defaultMainPage = `<p>Welcome to <strong>Kuadyverse Wiki</strong>.</p>
+<h2>Recent Activity</h2>
+<p>Use the search bar on the left or explore the latest page updates below:</p>
+<div id="main-page-recent-index"></div>`;
 
         // Helper function to safely escape strings for inline JS calls
         function escapeJSString(str) {
@@ -476,44 +467,6 @@
             hideEditor();
             closeSearchResults();
             updateRecentWidgets();
-            updateAllPagesList();
-        }
-
-        // Fetch and navigate to a random page from Supabase
-        async function loadRandomPage() {
-            const { data, error } = await supabaseClient
-                .from('pages')
-                .select('title');
-
-            if (data && data.length > 0) {
-                const randomIndex = Math.floor(Math.random() * data.length);
-                loadPage(data[randomIndex].title);
-            } else {
-                alert("No pages found in the database.");
-            }
-        }
-
-        // Fetch and render list of all pages in the sidebar
-        async function updateAllPagesList() {
-            const allPagesContainer = document.getElementById('all-pages-list');
-            if (!allPagesContainer) return;
-
-            const { data, error } = await supabaseClient
-                .from('pages')
-                .select('title')
-                .order('title', { ascending: true });
-
-            allPagesContainer.innerHTML = '';
-
-            if (data && data.length > 0) {
-                data.forEach(row => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<a href="#" onclick="loadPage('${escapeJSString(row.title)}')">${row.title}</a>`;
-                    allPagesContainer.appendChild(li);
-                });
-            } else {
-                allPagesContainer.innerHTML = '<li><em>No pages found</em></li>';
-            }
         }
 
         // Save Page to Supabase
@@ -665,7 +618,7 @@
             }
         }
 
-        // Owner Access Toggle with SHA-256 Hashing
+        // Owner Access Toggle with SHA-256 Check
         async function toggleAdmin() {
             if (!isAdmin) {
                 const input = prompt("Enter Owner Access Password:");
