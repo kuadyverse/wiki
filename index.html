@@ -362,7 +362,7 @@
                 <button class="btn-tool" onclick="wrapFormat('b')"><b>B</b></button>
                 <button class="btn-tool" onclick="wrapFormat('i')"><i>I</i></button>
                 <button class="btn-tool" onclick="wrapFormat('u')"><u>U</u></button>
-                <button class="btn-tool" onclick="wrapFormat('small')"><small>Small</small></button>
+                <button class="btn-tool" onclick="wrapFormat('small')"><small>small</small></button>
                 <button class="btn-tool" onclick="insertSnippet('h2')">Header (H2)</button>
                 <button class="btn-tool" onclick="insertSnippet('h3')">Subheader (H3)</button>
                 <button class="btn-tool" onclick="insertSnippet('br')">Break</button>
@@ -426,21 +426,27 @@
         function saveHistoryState() {
             if (isProgrammaticChange) return;
             const textArea = document.getElementById('input-content');
+            const val = textArea.value;
             
-            // Truncate future states if we made a change after undoing
-            if (historyIndex < editHistory.length - 1) {
+            // If we undid some changes and then made a new edit, erase the future stack
+            if (historyIndex >= 0 && historyIndex < editHistory.length - 1) {
                 editHistory = editHistory.slice(0, historyIndex + 1);
             }
 
-            if (editHistory.length === 0 || editHistory[editHistory.length - 1] !== textArea.value) {
-                editHistory.push(textArea.value);
-                if (editHistory.length > 50) editHistory.shift(); // Limit stack size
+            // Only push if different from current pointer state
+            if (historyIndex < 0 || editHistory[historyIndex] !== val) {
+                editHistory.push(val);
+                if (editHistory.length > 50) editHistory.shift();
                 historyIndex = editHistory.length - 1;
             }
         }
 
         function undoEdit() {
             const textArea = document.getElementById('input-content');
+            
+            // Sync any pending typing state before performing undo
+            saveHistoryState();
+
             if (historyIndex > 0) {
                 historyIndex--;
                 isProgrammaticChange = true;
@@ -449,22 +455,31 @@
             }
         }
 
-        // Helper to insert content specifically at the user's current cursor position
-        function insertAtCursor(textToInsert) {
+        // Selection-Aware Cursor & Wrap-Around Insertion Helper
+        function applyWrapOrInsert(beforeText, placeholder, afterText) {
+            saveHistoryState(); // Snapshot before performing modification
             const textArea = document.getElementById('input-content');
-            saveHistoryState();
-
+            
             const startPos = textArea.selectionStart;
             const endPos = textArea.selectionEnd;
+            const selectedText = textArea.value.substring(startPos, endPos);
 
-            textArea.value = textArea.value.substring(0, startPos) + textToInsert + textArea.value.substring(endPos);
+            const innerContent = selectedText ? selectedText : placeholder;
+            const replacement = beforeText + innerContent + afterText;
+
+            textArea.value = textArea.value.substring(0, startPos) + replacement + textArea.value.substring(endPos);
             
-            // Move cursor to immediately after the inserted text
-            const newCursorPos = startPos + textToInsert.length;
             textArea.focus();
-            textArea.setSelectionRange(newCursorPos, newCursorPos);
+            if (selectedText) {
+                const newCursorPos = startPos + replacement.length;
+                textArea.setSelectionRange(newCursorPos, newCursorPos);
+            } else {
+                const selectionStart = startPos + beforeText.length;
+                const selectionEnd = selectionStart + placeholder.length;
+                textArea.setSelectionRange(selectionStart, selectionEnd);
+            }
 
-            saveHistoryState();
+            saveHistoryState(); // Snapshot after performing modification
         }
 
         // Setup undo event listeners for typing and keyboard shortcuts
@@ -738,39 +753,54 @@
         }
 
         function wrapFormat(tag) {
-            const textArea = document.getElementById('input-content');
-            const start = textArea.selectionStart;
-            const end = textArea.selectionEnd;
-            const selectedText = textArea.value.substring(start, end);
-
-            const replacement = selectedText 
-                ? `<${tag}>${selectedText}</${tag}>` 
-                : `<${tag}>text</${tag}>`;
-
-            insertAtCursor(replacement);
+            applyWrapOrInsert(`<${tag}>`, 'text', `</${tag}>`);
         }
 
         function insertSnippet(type) {
-            let snippet = '';
-
             switch(type) {
-                case 'h2': snippet = '\n<h2>Section Header</h2>\n'; break;
-                case 'h3': snippet = '\n<h3>Sub-section Header</h3>\n'; break;
-                case 'br': snippet = `<br>\n`; break;
-                case 'ol': snippet = `\n<ol>\n  <li>First item</li>\n  <li>Second item</li>\n  <li>Third item</li>\n</ol>\n`; break;   
-                case 'ul': snippet = `\n<ul>\n  <li>First item</li>\n  <li>Second item</li>\n  <li>Third item</li>\n</ul>\n`; break;
-                case 'infobox': snippet = `\n<aside class="portable-infobox">\n  <table>\n    <tr><th colspan="2">Subject Title</th></tr>\n    <tr><td colspan="2"><img src="https://i.postimg.cc/xxx/pic.png" alt="Infobox Image"></td></tr>\n    <tr><td class="infobox-label">Type</td><td>Classification</td></tr>\n    <tr><td class="infobox-label">Attribute</td><td>Value</td></tr>\n  </table>\n</aside>\n`; break;
-                case 'int-link': snippet = `[[Target Page Name|Link Text]]`; break;
-                case 'ext-link': snippet = `<a href="https://example.com" target="_blank">External Link Text</a>`; break;
-                case 'footnote': snippet = `<sup id="fn1-ref"><a href="#fn1">[1]</a></sup>`; break;
-                case 'audio': snippet = `\n<audio controls src="audio-file.mp3"></audio>\n`; break;
-                case 'video': snippet = `\n<video controls src="video-file.mp4" width="400" preload="metadata"></video>\n`; break;
-                case 'yt-embed': snippet = `\n<iframe width="100%" height="400" src="https://www.youtube-nocookie.com/embed/VIDEO_ID" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n`; break;
-                case 'footer': snippet = `\n<div class="wiki-footer">\n  <hr>\n  <p id="fn1">1. <a href="#fn1-ref">^</a> Footnote reference text goes here.</p>\n</div>\n`; break;
-                case 'note': snippet = `\n<!-- Your note goes here. This message won't pop up on the page! -->\n`; break;     
+                case 'h2': 
+                    applyWrapOrInsert('\n<h2>', 'Section Header', '</h2>\n'); 
+                    break;
+                case 'h3': 
+                    applyWrapOrInsert('\n<h3>', 'Sub-section Header', '</h3>\n'); 
+                    break;
+                case 'br': 
+                    applyWrapOrInsert('', '<br>\n', ''); 
+                    break;
+                case 'ol': 
+                    applyWrapOrInsert('\n<ol>\n  <li>', 'First item', '</li>\n  <li>Second item</li>\n  <li>Third item</li>\n</ol>\n'); 
+                    break;   
+                case 'ul': 
+                    applyWrapOrInsert('\n<ul>\n  <li>', 'First item', '</li>\n  <li>Second item</li>\n  <li>Third item</li>\n</ul>\n'); 
+                    break;
+                case 'infobox': 
+                    applyWrapOrInsert('\n<aside class="portable-infobox">\n  <table>\n    <tr><th colspan="2">', 'Subject Title', '</th></tr>\n    <tr><td colspan="2"><img src="https://i.postimg.cc/xxx/pic.png" alt="Infobox Image"></td></tr>\n    <tr><td class="infobox-label">Type</td><td>Classification</td></tr>\n    <tr><td class="infobox-label">Attribute</td><td>Value</td></tr>\n  </table>\n</aside>\n'); 
+                    break;
+                case 'int-link': 
+                    applyWrapOrInsert('[[', 'Target Page Name|Link Text', ']]'); 
+                    break;
+                case 'ext-link': 
+                    applyWrapOrInsert('<a href="https://example.com" target="_blank">', 'External Link Text', '</a>'); 
+                    break;
+                case 'footnote': 
+                    applyWrapOrInsert('<sup id="fn1-ref"><a href="#fn1">[', '1', ']</a></sup>'); 
+                    break;
+                case 'audio': 
+                    applyWrapOrInsert('\n<audio controls src="', 'audio-file.mp3', '"></audio>\n'); 
+                    break;
+                case 'video': 
+                    applyWrapOrInsert('\n<video controls src="', 'video-file.mp4', '" width="400" preload="metadata"></video>\n'); 
+                    break;
+                case 'yt-embed': 
+                    applyWrapOrInsert('\n<iframe width="100%" height="400" src="https://www.youtube-nocookie.com/embed/', 'VIDEO_ID', '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n'); 
+                    break;
+                case 'footer': 
+                    applyWrapOrInsert('\n<div class="wiki-footer">\n  <hr>\n  <p id="fn1">1. <a href="#fn1-ref">^</a> ', 'Footnote reference text goes here.', '</p>\n</div>\n'); 
+                    break;
+                case 'note': 
+                    applyWrapOrInsert('\n<!-- ', 'Your note goes here. This message won\'t pop up on the page!', ' -->\n'); 
+                    break;     
             }
-
-            insertAtCursor(snippet);
         }
 
         function insertImageLink() {
@@ -782,8 +812,7 @@
                 return;
             }
 
-            const imgTag = `\n<img src="${url}" alt="Wiki Image" style="max-width:100%; height:auto;">\n`;
-            insertAtCursor(imgTag);
+            applyWrapOrInsert(`\n<img src="${url}" alt="`, 'Wiki Image', '" style="max-width:100%; height:auto;">\n');
             urlInput.value = '';
         }
 
