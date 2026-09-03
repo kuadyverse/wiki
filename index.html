@@ -411,7 +411,6 @@
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        
         let isAdmin = false;
 
         const defaultMainPage = `<p>Welcome to <strong>Kuadyverse Wiki</strong>.</p>
@@ -419,28 +418,53 @@
 <p>Use the search bar on the left or explore the latest page updates below:</p>
 <div id="main-page-recent-index"></div>`;
 
-        // Undo History Stack Setup
+        // Fixed Undo History Stack Engine
         let editHistory = [];
+        let historyIndex = -1;
+        let isProgrammaticChange = false;
 
         function saveHistoryState() {
+            if (isProgrammaticChange) return;
             const textArea = document.getElementById('input-content');
+            
+            // Truncate future states if we made a change after undoing
+            if (historyIndex < editHistory.length - 1) {
+                editHistory = editHistory.slice(0, historyIndex + 1);
+            }
+
             if (editHistory.length === 0 || editHistory[editHistory.length - 1] !== textArea.value) {
                 editHistory.push(textArea.value);
+                if (editHistory.length > 50) editHistory.shift(); // Limit stack size
+                historyIndex = editHistory.length - 1;
             }
         }
 
         function undoEdit() {
             const textArea = document.getElementById('input-content');
-            if (editHistory.length > 0) {
-                if (editHistory[editHistory.length - 1] === textArea.value) {
-                    editHistory.pop();
-                }
-                if (editHistory.length > 0) {
-                    textArea.value = editHistory.pop();
-                } else {
-                    textArea.value = '';
-                }
+            if (historyIndex > 0) {
+                historyIndex--;
+                isProgrammaticChange = true;
+                textArea.value = editHistory[historyIndex];
+                isProgrammaticChange = false;
             }
+        }
+
+        // Helper to insert content specifically at the user's current cursor position
+        function insertAtCursor(textToInsert) {
+            const textArea = document.getElementById('input-content');
+            saveHistoryState();
+
+            const startPos = textArea.selectionStart;
+            const endPos = textArea.selectionEnd;
+
+            textArea.value = textArea.value.substring(0, startPos) + textToInsert + textArea.value.substring(endPos);
+            
+            // Move cursor to immediately after the inserted text
+            const newCursorPos = startPos + textToInsert.length;
+            textArea.focus();
+            textArea.setSelectionRange(newCursorPos, newCursorPos);
+
+            saveHistoryState();
         }
 
         // Setup undo event listeners for typing and keyboard shortcuts
@@ -652,37 +676,41 @@
         }
 
         // Owner Access Toggle
-async function toggleAdmin() {
-    if (!isAdmin) {
-        const input = prompt("Enter Owner Access Password:");
-        if (input !== null) {
-            // Send the input to Supabase to verify
-            const { data: isValid, error } = await supabaseClient
-                .rpc('verify_owner_password', { user_input: input });
+        async function toggleAdmin() {
+            if (!isAdmin) {
+                const input = prompt("Enter Owner Access Password:");
+                if (input !== null) {
+                    const { data: isValid, error } = await supabaseClient
+                        .rpc('verify_owner_password', { user_input: input });
 
-            if (error) {
-                alert("Verification error: " + error.message);
-            } else if (isValid) {
-                isAdmin = true;
-                document.getElementById('admin-panel').style.display = 'block';
-                document.getElementById('auth-btn').innerText = "Exit Owner Mode";
+                    if (error) {
+                        alert("Verification error: " + error.message);
+                    } else if (isValid) {
+                        isAdmin = true;
+                        document.getElementById('admin-panel').style.display = 'block';
+                        document.getElementById('auth-btn').innerText = "Exit Owner Mode";
+                    } else {
+                        alert("Incorrect password.");
+                    }
+                }
             } else {
-                alert("Incorrect password.");
+                isAdmin = false;
+                document.getElementById('admin-panel').style.display = 'none';
+                document.getElementById('auth-btn').innerText = "Owner Access";
+                hideEditor();
             }
         }
-    } else {
-        isAdmin = false;
-        document.getElementById('admin-panel').style.display = 'none';
-        document.getElementById('auth-btn').innerText = "Owner Access";
-        hideEditor();
-    }
-}
+
+        function resetEditorState() {
+            editHistory = [];
+            historyIndex = -1;
+            saveHistoryState();
+        }
 
         function showAddEditor() {
             document.getElementById('input-title').value = '';
             document.getElementById('input-content').value = '';
-            editHistory = [];
-            saveHistoryState();
+            resetEditorState();
             showEditorForm();
         }
 
@@ -697,8 +725,7 @@ async function toggleAdmin() {
                 .maybeSingle();
 
             document.getElementById('input-content').value = data ? data.content : '';
-            editHistory = [];
-            saveHistoryState();
+            resetEditorState();
             showEditorForm();
         }
 
@@ -711,7 +738,6 @@ async function toggleAdmin() {
         }
 
         function wrapFormat(tag) {
-            saveHistoryState();
             const textArea = document.getElementById('input-content');
             const start = textArea.selectionStart;
             const end = textArea.selectionEnd;
@@ -721,17 +747,10 @@ async function toggleAdmin() {
                 ? `<${tag}>${selectedText}</${tag}>` 
                 : `<${tag}>text</${tag}>`;
 
-            textArea.value = textArea.value.substring(0, start) + replacement + textArea.value.substring(end);
-            textArea.focus();
-            
-            const newCursorPos = selectedText ? start + replacement.length : start + tag.length + 2;
-            textArea.setSelectionRange(newCursorPos, newCursorPos);
-            saveHistoryState();
+            insertAtCursor(replacement);
         }
 
         function insertSnippet(type) {
-            saveHistoryState();
-            const textArea = document.getElementById('input-content');
             let snippet = '';
 
             switch(type) {
@@ -751,8 +770,7 @@ async function toggleAdmin() {
                 case 'note': snippet = `\n<!-- Your note goes here. This message won't pop up on the page! -->\n`; break;     
             }
 
-            textArea.value += snippet;
-            saveHistoryState();
+            insertAtCursor(snippet);
         }
 
         function insertImageLink() {
@@ -764,11 +782,9 @@ async function toggleAdmin() {
                 return;
             }
 
-            saveHistoryState();
             const imgTag = `\n<img src="${url}" alt="Wiki Image" style="max-width:100%; height:auto;">\n`;
-            document.getElementById('input-content').value += imgTag;
+            insertAtCursor(imgTag);
             urlInput.value = '';
-            saveHistoryState();
         }
 
         // Initialize Wiki
