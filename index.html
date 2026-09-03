@@ -358,13 +358,14 @@
             
             <!-- Quick Markup Toolbar -->
             <div id="toolbar">
-                <button class="btn-tool" onclick="wrapFormat('b')"><b>B</b> (Bold)</button>
-                <button class="btn-tool" onclick="wrapFormat('i')"><i>I</i> (Italic)</button>
-                <button class="btn-tool" onclick="wrapFormat('u')"><u>U</u> (Underline)</button>
-                <button class="btn-tool" onclick="wrapFormat('small')"><small>Small Text</small></button>
+                <button class="btn-tool" onclick="undoEdit()">↶ Undo</button>
+                <button class="btn-tool" onclick="wrapFormat('b')"><b>B</b></button>
+                <button class="btn-tool" onclick="wrapFormat('i')"><i>I</i></button>
+                <button class="btn-tool" onclick="wrapFormat('u')"><u>U</u></button>
+                <button class="btn-tool" onclick="wrapFormat('small')"><small>Small</small></button>
                 <button class="btn-tool" onclick="insertSnippet('h2')">Header (H2)</button>
                 <button class="btn-tool" onclick="insertSnippet('h3')">Subheader (H3)</button>
-                <button class="btn-tool" onclick="insertSnippet('br')">Break (&lt;br&gt;)</button>
+                <button class="btn-tool" onclick="insertSnippet('br')">Break</button>
                 <button class="btn-tool" onclick="insertSnippet('ol')">OL</button>
                 <button class="btn-tool" onclick="insertSnippet('ul')">UL</button>
                 <button class="btn-tool" onclick="insertSnippet('infobox')">Infobox</button>
@@ -417,6 +418,46 @@
 <h2>Recent Activity</h2>
 <p>Use the search bar on the left or explore the latest page updates below:</p>
 <div id="main-page-recent-index"></div>`;
+
+        // Undo History Stack Setup
+        let editHistory = [];
+
+        function saveHistoryState() {
+            const textArea = document.getElementById('input-content');
+            if (editHistory.length === 0 || editHistory[editHistory.length - 1] !== textArea.value) {
+                editHistory.push(textArea.value);
+            }
+        }
+
+        function undoEdit() {
+            const textArea = document.getElementById('input-content');
+            if (editHistory.length > 0) {
+                if (editHistory[editHistory.length - 1] === textArea.value) {
+                    editHistory.pop();
+                }
+                if (editHistory.length > 0) {
+                    textArea.value = editHistory.pop();
+                } else {
+                    textArea.value = '';
+                }
+            }
+        }
+
+        // Setup undo event listeners for typing and keyboard shortcuts
+        document.addEventListener('DOMContentLoaded', () => {
+            const textArea = document.getElementById('input-content');
+            
+            textArea.addEventListener('input', () => {
+                saveHistoryState();
+            });
+
+            textArea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    undoEdit();
+                }
+            });
+        });
 
         // Helper function to safely escape strings for inline JS calls
         function escapeJSString(str) {
@@ -611,7 +652,6 @@
         }
 
         // Owner Access Toggle
-// Owner Access Toggle
 async function toggleAdmin() {
     if (!isAdmin) {
         const input = prompt("Enter Owner Access Password:");
@@ -641,6 +681,8 @@ async function toggleAdmin() {
         function showAddEditor() {
             document.getElementById('input-title').value = '';
             document.getElementById('input-content').value = '';
+            editHistory = [];
+            saveHistoryState();
             showEditorForm();
         }
 
@@ -655,6 +697,8 @@ async function toggleAdmin() {
                 .maybeSingle();
 
             document.getElementById('input-content').value = data ? data.content : '';
+            editHistory = [];
+            saveHistoryState();
             showEditorForm();
         }
 
@@ -667,6 +711,7 @@ async function toggleAdmin() {
         }
 
         function wrapFormat(tag) {
+            saveHistoryState();
             const textArea = document.getElementById('input-content');
             const start = textArea.selectionStart;
             const end = textArea.selectionEnd;
@@ -681,9 +726,11 @@ async function toggleAdmin() {
             
             const newCursorPos = selectedText ? start + replacement.length : start + tag.length + 2;
             textArea.setSelectionRange(newCursorPos, newCursorPos);
+            saveHistoryState();
         }
 
         function insertSnippet(type) {
+            saveHistoryState();
             const textArea = document.getElementById('input-content');
             let snippet = '';
 
@@ -705,6 +752,7 @@ async function toggleAdmin() {
             }
 
             textArea.value += snippet;
+            saveHistoryState();
         }
 
         function insertImageLink() {
@@ -716,9 +764,11 @@ async function toggleAdmin() {
                 return;
             }
 
+            saveHistoryState();
             const imgTag = `\n<img src="${url}" alt="Wiki Image" style="max-width:100%; height:auto;">\n`;
             document.getElementById('input-content').value += imgTag;
             urlInput.value = '';
+            saveHistoryState();
         }
 
         // Initialize Wiki
